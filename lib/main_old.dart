@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(MyApp());
 
@@ -13,13 +11,18 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.indigo,
         scaffoldBackgroundColor: Color(0xFFF5F7FA),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(fontSize: 18),
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             padding: EdgeInsets.symmetric(vertical: 14, horizontal: 20),
             textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             backgroundColor: Colors.indigo,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ),
@@ -33,22 +36,32 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Future.delayed(Duration(seconds: 2), () {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => QuizPage()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => QuizPage()),
+      );
     });
 
     return Scaffold(
-      backgroundColor: Colors.indigo,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.flash_on, size: 80, color: Colors.white),
+            Icon(Icons.code, size: 80, color: Colors.indigo),
             SizedBox(height: 20),
-            Text('Programming Quiz',
-                style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+            Text(
+              'Programming Quiz',
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
+            ),
             SizedBox(height: 10),
-            Text('Let’s test your knowledge!',
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
+            Text(
+              'Let’s test your fundamentals!',
+              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+            ),
           ],
         ),
       ),
@@ -118,54 +131,12 @@ class _QuizPageState extends State<QuizPage> {
 
   int _currentIndex = 0;
   int _score = 0;
-  int? _selectedIndex;
   bool _showingAnswer = false;
-
-  int _timeLeft = 10;
-  double _progress = 1.0;
-  late Timer _timer;
-
-  int _highestScore = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadHighestScore();
-    _startTimer();
-  }
-
-  void _startTimer() {
-    _timeLeft = 10;
-    _progress = 1.0;
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (_timeLeft == 0) {
-        _handleTimeout();
-      } else {
-        setState(() {
-          _timeLeft--;
-          _progress = _timeLeft / 10;
-        });
-      }
-    });
-  }
-
-  void _stopTimer() {
-    _timer.cancel();
-  }
-
-  void _handleTimeout() {
-    _stopTimer();
-    setState(() {
-      _showingAnswer = true;
-      _selectedIndex = null;
-    });
-    Future.delayed(Duration(seconds: 1), _nextQuestion);
-  }
+  int? _selectedIndex;
 
   void _handleAnswer(int index) {
     if (_showingAnswer) return;
 
-    _stopTimer();
     setState(() {
       _selectedIndex = index;
       _showingAnswer = true;
@@ -173,79 +144,28 @@ class _QuizPageState extends State<QuizPage> {
         _score++;
       }
     });
-    Future.delayed(Duration(seconds: 1), _nextQuestion);
-  }
 
-  void _nextQuestion() {
-    if (_currentIndex + 1 >= _questions.length) {
-      _saveScore();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => ResultScreen(score: _score, total: _questions.length)),
-      );
-    } else {
+    Future.delayed(Duration(seconds: 1), () {
       setState(() {
         _currentIndex++;
-        _selectedIndex = null;
         _showingAnswer = false;
+        _selectedIndex = null;
       });
-      _startTimer();
-    }
-  }
-
-  void _saveScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    int? saved = prefs.getInt('highest_score');
-    if (saved == null || _score > saved) {
-      await prefs.setInt('highest_score', _score);
-    }
-  }
-
-  void _loadHighestScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _highestScore = prefs.getInt('highest_score') ?? 0;
     });
   }
 
   @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    if (_currentIndex >= _questions.length) {
+      return ResultScreen(score: _score, total: _questions.length);
+    }
+
     final question = _questions[_currentIndex];
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Question ${_currentIndex + 1}/${_questions.length}'),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 34,
-                  height: 34,
-                  child: CircularProgressIndicator(
-                    value: _progress,
-                    strokeWidth: 4,
-                    backgroundColor: Colors.grey[300],
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-                Text(
-                  '$_timeLeft',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-                )
-              ],
-            ),
-          )
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -289,6 +209,7 @@ class _QuizPageState extends State<QuizPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: buttonColor,
                     foregroundColor: buttonColor != null ? Colors.white : null,
+                    side: BorderSide(color: Colors.indigo.shade100),
                   ),
                   child: Text(question['answers'][index]),
                 ),
@@ -308,47 +229,54 @@ class ResultScreen extends StatelessWidget {
 
   ResultScreen({required this.score, required this.total});
 
-  Future<int> _getHighestScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('highest_score') ?? 0;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<int>(
-      future: _getHighestScore(),
-      builder: (context, snapshot) {
-        final highScore = snapshot.data ?? 0;
-        return Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.emoji_events, size: 100, color: Colors.amber),
-                  SizedBox(height: 20),
-                  Text('Quiz Completed!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 12),
-                  Text('Your Score: $score / $total', style: TextStyle(fontSize: 20)),
-                  Text('Highest Score: $highScore', style: TextStyle(fontSize: 18, color: Colors.grey[700])),
-                  SizedBox(height: 30),
-                  ElevatedButton.icon(
-                    icon: Icon(Icons.refresh),
-                    label: Text('Restart Quiz'),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => QuizPage()),
-                      );
-                    },
-                  )
-                ],
+    String message;
+    double percent = score / total;
+
+    if (percent >= 0.9) {
+      message = 'Excellent!';
+    } else if (percent >= 0.7) {
+      message = 'Great job!';
+    } else if (percent >= 0.5) {
+      message = 'Good effort!';
+    } else {
+      message = 'Keep practicing!';
+    }
+
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.emoji_events, size: 100, color: Colors.amber),
+              SizedBox(height: 20),
+              Text(
+                message,
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
-            ),
+              SizedBox(height: 12),
+              Text(
+                'Your score: $score / $total',
+                style: TextStyle(fontSize: 20),
+              ),
+              SizedBox(height: 30),
+              ElevatedButton.icon(
+                icon: Icon(Icons.refresh),
+                label: Text('Restart Quiz'),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => QuizPage()),
+                  );
+                },
+              )
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
